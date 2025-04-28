@@ -130,31 +130,39 @@ func (r *Repository[T, O, M]) Create(ctx context.Context, value convertor.Into[[
     return
 }
 func (r *Repository[T, O, M]) Upsert(ctx context.Context, value convertor.Into[T], modifiers ...M) (err error) {
-    
-    var (
-        val  T
-        cnt  int64
-        sess *xorm.Session
-    )
-    if sess, err = r.setupSession(ctx, modifiers...); err != nil {
-        return
-    }
-    if cnt, err = sess.Count(&val); err != nil {
-        return
-    }
-    if cnt == 0 {
-        if _, err = sess.Insert(value); err != nil {
-            return
-        }
-        return
-    }
-    if val, err = value.Into(); err != nil {
-        return
-    }
-    if cnt, err = sess.Update(val); err != nil {
-        return
-    }
-    return
+	var (
+		val T
+		cnt int64
+	)
+	{
+		var sess *xorm.Session
+		if sess, err = r.setupSession(ctx, modifiers...); err != nil {
+			return
+		}
+		if cnt, err = sess.Count(&val); err != nil {
+			return
+		}
+
+	}
+	if cnt == 0 {
+		if _, err = r.engine.Context(ctx).Insert(value); err != nil {
+			return
+		}
+		return
+	}
+	{
+		var sess *xorm.Session
+		if sess, err = r.setupSession(ctx, modifiers...); err != nil {
+			return
+		}
+		if val, err = value.Into(); err != nil {
+			return
+		}
+		if cnt, err = sess.Update(val); err != nil {
+			return
+		}
+	}
+	return
 }
 func (r *Repository[T, O, M]) Delete(ctx context.Context, modifiers ...M) (cnt int64, err error) {
     var (
